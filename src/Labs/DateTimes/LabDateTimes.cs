@@ -23,13 +23,12 @@ namespace Labs.DateTimes
         public DateTime LocalDateTimeWithKind { get; set; }
 
         public DateTime UtcDateTime { get; set; }
-
-        public DateTimeOffset LocalDateTimeOffset { get; set; }
-        public DateTimeOffset UtcDateTimeOffset { get; set; }
     }
-    
+
     public class LabDateTimesFixture : DbFixture
     {
+        private static readonly object Sync = new();
+
         public IMongoCollection<LabDoc> Collection { get; }
         public DateTime Start { get; }
         public DateTime StartUtc { get; }
@@ -37,36 +36,37 @@ namespace Labs.DateTimes
         public LabDateTimesFixture(IMessageSink sink) : base(sink)
         {
             Collection = Db.GetCollection<LabDoc>("datetimes");
-            
+
             Start = new DateTime(2021, 5, 1, 8, 0, 0);
             StartUtc = Start.ToUniversalTime();
         }
-        
+
         public void EnsureSampleDateExists()
         {
-            var dataExists = Collection.Find(x => true).Any();
-            if (dataExists)
-                return;
+            lock (Sync)
+            {
+                var dataExists = Collection.Find(x => true).Any();
+                if (dataExists)
+                    return;
 
-            var labDocs = Enumerable
-                .Range(0, 2)
-                .SelectMany(day => Enumerable.Range(0, 12)
-                    .Select(hour =>
-                    {
-                        var local = Start.AddDays(day).AddHours(hour);
-                        var utc = local.ToUniversalTime();
-
-                        return new LabDoc
+                var labDocs = Enumerable
+                    .Range(0, 2)
+                    .SelectMany(day => Enumerable.Range(0, 12)
+                        .Select(hour =>
                         {
-                            LocalDateTimeWithoutKind = local,
-                            LocalDateTimeWithKind = local,
-                            UtcDateTime = utc,
-                            LocalDateTimeOffset = local,
-                            UtcDateTimeOffset = utc
-                        };
-                    }));
+                            var local = Start.AddDays(day).AddHours(hour);
+                            var utc = local.ToUniversalTime();
 
-            Collection.InsertMany(labDocs);
+                            return new LabDoc
+                            {
+                                LocalDateTimeWithoutKind = local,
+                                LocalDateTimeWithKind = local,
+                                UtcDateTime = utc
+                            };
+                        }));
+
+                Collection.InsertMany(labDocs);
+            }
         }
     }
 
@@ -85,7 +85,7 @@ namespace Labs.DateTimes
             => (await _fixture.Collection.Find(d => true).FirstAsync())
                 .UtcDateTime.Kind
                 .Should().Be(DateTimeKind.Utc);
-        
+
         [Fact]
         public async Task B_Queries_Should_match_utc_date_arg()
             => (await _fixture.Collection
@@ -101,7 +101,7 @@ namespace Labs.DateTimes
                 .Find(d => d.UtcDateTime == _fixture.StartUtc.AddMilliseconds(-1))
                 .AnyAsync()).Should().BeFalse();
     }
-    
+
     public class LocalDateWithoutKind : IClassFixture<LabDateTimesFixture>
     {
         private readonly LabDateTimesFixture _fixture;
@@ -133,7 +133,7 @@ namespace Labs.DateTimes
                 .Find(d => d.LocalDateTimeWithoutKind == _fixture.Start.AddMilliseconds(-1))
                 .AnyAsync()).Should().BeFalse();
     }
-    
+
     public class LocalDateWithKind : IClassFixture<LabDateTimesFixture>
     {
         private readonly LabDateTimesFixture _fixture;
