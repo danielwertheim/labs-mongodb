@@ -89,11 +89,11 @@ namespace Labs.DateTimes
         [Fact]
         public async Task B_Queries_Should_match_utc_date_arg()
             => (await _fixture.Collection
-                    .Find(d => d.UtcDateTime <= _fixture.StartUtc.AddHours(3))
+                    .Find(d => d.UtcDateTime <= _fixture.StartUtc.AddHours(1))
                     .ToListAsync())
                 .Select(d => d.UtcDateTime)
-                .Should().HaveCount(4)
-                .And.ContainInOrder(_fixture.StartUtc, _fixture.StartUtc.AddHours(1), _fixture.StartUtc.AddHours(2), _fixture.StartUtc.AddHours(3));
+                .Should().HaveCount(2)
+                .And.ContainInOrder(_fixture.StartUtc, _fixture.StartUtc.AddHours(1));
 
         [Fact]
         public async Task C_Queries_Should_not_match_when_millisecond_differs()
@@ -113,19 +113,19 @@ namespace Labs.DateTimes
         }
 
         [Fact]
-        public async Task A_Returned_date_time_Should_have_kind_Local()
+        public async Task A_Returned_date_time_Should_have_kind_Utc_as_the_driver_does_not_take_the_input_into_consideration()
             => (await _fixture.Collection.Find(d => true).FirstAsync())
                 .LocalDateTimeWithoutKind.Kind
-                .Should().Be(DateTimeKind.Local);
+                .Should().Be(DateTimeKind.Utc);
 
         [Fact]
-        public async Task B_Queries_Should_match_local_date_arg()
+        public async Task B_Queries_Should_not_match_local_date_arg_as_it_is_stored_in_utc()
             => (await _fixture.Collection
-                    .Find(d => d.LocalDateTimeWithoutKind <= _fixture.Start.AddHours(3))
+                    .Find(d => d.LocalDateTimeWithoutKind <= _fixture.Start.AddHours(1))
                     .ToListAsync())
                 .Select(d => d.LocalDateTimeWithoutKind)
-                .Should().HaveCount(4)
-                .And.ContainInOrder(_fixture.Start, _fixture.Start.AddHours(1), _fixture.Start.AddHours(2), _fixture.Start.AddHours(3));
+                .Should().HaveCount(2)
+                .And.ContainInOrder(_fixture.StartUtc, _fixture.StartUtc.AddHours(1));
 
         [Fact]
         public async Task C_Queries_Should_not_match_when_millisecond_differs()
@@ -153,11 +153,11 @@ namespace Labs.DateTimes
         [Fact]
         public async Task B_Queries_Should_match_local_date_arg()
             => (await _fixture.Collection
-                    .Find(d => d.LocalDateTimeWithKind <= _fixture.Start.AddHours(3))
+                    .Find(d => d.LocalDateTimeWithKind <= _fixture.Start.AddHours(1))
                     .ToListAsync())
                 .Select(d => d.LocalDateTimeWithKind)
-                .Should().HaveCount(4)
-                .And.ContainInOrder(_fixture.Start, _fixture.Start.AddHours(1), _fixture.Start.AddHours(2), _fixture.Start.AddHours(3));
+                .Should().HaveCount(2)
+                .And.ContainInOrder(_fixture.Start, _fixture.Start.AddHours(1));
 
         [Fact]
         public async Task C_Queries_Should_not_match_when_millisecond_differs()
